@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat Room</title>
+    <style>
+      /* Your custom CSS styles */
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f2f2f2;
+      }
+
+      #chat-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .message-box {
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 10px;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: flex-start;
+      }
+
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        margin-right: 10px;
+      }
+
+      .message-content {
+        flex: 1;
+      }
+
+      .username {
+        font-weight: bold;
+        color: #007bff;
+        margin-right: 5px;
+      }
+
+      .timestamp {
+        font-size: 0.8em;
+        color: #888;
+      }
+
+      .message-text {
+        margin-top: 5px;
+      }
+
+      .emojione {
+        height: 18px;
+      }
+
+      #input-container {
+        margin-top: 20px;
+        display: flex;
+      }
+
+      #input {
+        flex: 1;
+        padding: 8px;
+        border-radius: 5px;
+        border: none;
+        font-size: 16px;
+      }
+
+      #send {
+        padding: 8px 15px;
+        border-radius: 5px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        cursor: pointer;
+      }
+
+      .sender {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.recipient {
+    justify-content: flex-end;
+  text-align: right;
+}
+
+.message-box {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 15px;
+}
+
+.message-content {
+  background-color: #fff;
+  border-radius: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 10px;
+  width: fit-content;
+}
+
+.timestamp {
+  font-size: 0.8em;
+  color: #888;
+  margin-top: 5px;
+}
+    </style>
+  </head>
+  <body>
+    <div class="message-box sender">
+        <div class="message-content">
+          <p class="message-text">Hello, how's everyone doing? 😄👋</p>
+          <span class="timestamp">12:34 PM</span>
+        </div>
+      </div>
+      
+      <div class="message-box recipient">
+        <div class="message-content">
+          <p class="message-text">Hey there! Doing great! 🙌</p>
+          <span class="timestamp">12:35 PM</span>
+        </div>
+      </div>
+
+
+      <div id="input-container">
+        <input type="text" id="input" placeholder="Type your message" />
+        <button id="send">Send</button>
+      </div>
+    </div>
+
+     <!-- Avatar selection -->
+  <input type="file" id="avatarInput" accept="image/*" />
+  <button id="uploadAvatar">Upload Avatar</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script
+      src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <script>
+        const socket = io();
+        const chatContainer = document.getElementById('chat-container');
+        const input = document.getElementById('input');
+        const sendButton = document.getElementById('send');
+      
+        sendButton.addEventListener('click', () => {
+          const message = input.value.trim();
+          if (message) {
+            socket.emit('message', { username: 'User', message });
+            input.value = '';
+          }
+        });
+      
+        socket.on('message', (data) => {
+          const messageBox = createMessageBox(data.username, data.message);
+          chatContainer.appendChild(messageBox);
+        });
+      
+        function createMessageBox(username, message) {
+          const messageBox = document.createElement('div');
+          messageBox.className = 'message-box';
+          messageBox.innerHTML = `
+            <img src="avatar_user.png" class="avatar">
+            <div class="message-content">
+              <span class="username">${username}</span>
+              <span class="timestamp">${getCurrentTime()}</span>
+              <p class="message-text">${emojione.toImage(message)}</p>
+            </div>
+          `;
+          return messageBox;
+        }
+      
+        function getCurrentTime() {
+          const now = new Date();
+          const hours = now.getHours().toString().padStart(2, '0');
+          const minutes = now.getMinutes().toString().padStart(2, '0');
+          return `${hours}:${minutes}`;
+        }
+
+        // Function to append messages to the chat container
+function appendMessage(username, message, messageType, avatarUrl) {
+  const chatContainer = document.getElementById('chat-container');
+  const messageBox = document.createElement('div');
+  messageBox.className = `message-box ${messageType}`;
+  messageBox.innerHTML = `
+    <img src="${avatarUrl}" class="avatar">
+    <div class="message-content">
+      <span class="username">${username}</span>
+      <span class="timestamp">${getCurrentTime()}</span>
+      <p class="message-text">${emojione.toImage(message)}</p>
+    </div>
+  `;
+  chatContainer.appendChild(messageBox);
+}
+
+// Avatar selection
+document.getElementById('uploadAvatar').addEventListener('click', async () => {
+  const avatarInput = document.getElementById('avatarInput');
+  const file = avatarInput.files[0];
+  
+  if (file) {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    
+    try {
+      const response = await fetch('/upload-avatar', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      const data = await response.json();
+      
+      // Update the user's avatar URL and update the UI
+      updateUserAvatar(data.avatarUrl);
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+    }
+  }
+});
+
+function updateUserAvatar(avatarUrl) {
+  // Update the user's avatar in the UI
+  const userAvatarElement = document.getElementById('user-avatar');
+  userAvatarElement.src = avatarUrl;
+}
+
+// Socket.io setup and message handling
+document.addEventListener('DOMContentLoaded', () => {
+  // Your socket.io setup and message handling code here
+});
+      </script>
+  </body>
+</html>
